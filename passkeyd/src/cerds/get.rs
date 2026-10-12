@@ -366,7 +366,7 @@ fn authorization_fprint(
     _stdout: &mut ChildStdout,
     _event_buf: &mut Vec<u8>,
 ) -> anyhow::Result<AuthorizationOutcome> {
-    let connection = match Connection::session() {
+    let connection = match Connection::system() {
         Ok(c) => c,
         Err(e) => {
             info!("[Fingureprint] bus connection failed: {e}");
