@@ -366,27 +366,43 @@ fn authorization_fprint(
     _stdout: &mut ChildStdout,
     _event_buf: &mut Vec<u8>,
 ) -> anyhow::Result<AuthorizationOutcome> {
-    let Ok(connection) = Connection::session() else {
-        return Ok(AuthorizationOutcome::FallbackToPassword(
-            FallbackToPasswordReason::FingerprintDeviceUnavailable,
-        ));
+    let connection = match Connection::session() {
+        Ok(c) => c,
+        Err(e) => {
+            info!("[Fingureprint] bus connection failed: {e}");
+            return Ok(AuthorizationOutcome::FallbackToPassword(
+                FallbackToPasswordReason::FingerprintDeviceUnavailable,
+            ));
+        }
     };
-    let Ok(fprint_manager) = FprintManagerProxyBlocking::new(&connection) else {
-        return Ok(AuthorizationOutcome::FallbackToPassword(
-            FallbackToPasswordReason::FingerprintDeviceUnavailable,
-        ));
+    let fprint_manager = match FprintManagerProxyBlocking::new(&connection) {
+        Ok(m) => m,
+        Err(e) => {
+            info!("[Fingureprint] manager proxy failed: {e}");
+            return Ok(AuthorizationOutcome::FallbackToPassword(
+                FallbackToPasswordReason::FingerprintDeviceUnavailable,
+            ));
+        }
     };
 
-    let Ok(device_path) = fprint_manager.get_default_device() else {
-        return Ok(AuthorizationOutcome::FallbackToPassword(
-            FallbackToPasswordReason::FingerprintDeviceUnavailable,
-        ));
+    let device_path = match fprint_manager.get_default_device() {
+        Ok(p) => p,
+        Err(e) => {
+            info!("[Fingureprint] get_default_device failed: {e}");
+            return Ok(AuthorizationOutcome::FallbackToPassword(
+                FallbackToPasswordReason::FingerprintDeviceUnavailable,
+            ));
+        }
     };
 
-    let Ok(fprint_device) = FprintDeviceProxyBlocking::new(&connection, device_path) else {
-        return Ok(AuthorizationOutcome::FallbackToPassword(
-            FallbackToPasswordReason::FingerprintDeviceUnavailable,
-        ));
+    let fprint_device = match FprintDeviceProxyBlocking::new(&connection, device_path) {
+        Ok(d) => d,
+        Err(e) => {
+            info!("[Fingureprint] device proxy failed: {e}");
+            return Ok(AuthorizationOutcome::FallbackToPassword(
+                FallbackToPasswordReason::FingerprintDeviceUnavailable,
+            ));
+        }
     };
 
     let username = get_username_from_uid(config.gui_uid).ok_or(CtapStatus::OperationDenied)?;
